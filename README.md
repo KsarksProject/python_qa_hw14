@@ -1,1 +1,0 @@
-# python_qa_hw14
