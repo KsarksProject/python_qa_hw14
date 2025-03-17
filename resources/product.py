@@ -8,4 +8,4 @@ class Products:
     price: str
 
 
-product = Products(model="Coal Pilot XX Charcoal Grill", quantity="1", price="123400")
+product = Products(model="Гриль угольный Coal Pilot XX", quantity="1", price="123 400")

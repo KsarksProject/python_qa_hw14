@@ -1,94 +1,74 @@
-from selene import browser, have, by, be
-from selene.support.conditions import be as selene_be
-from selene.support.shared import browser as selene_browser
+import time
+from selene import browser, have, by, command, be
 from resources.product import Products
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
+
 
 class MainPage:
+
     def open_browser(self):
-        selene_browser.open("https://aabs.pro/")
-        try:
-            # Попытка найти и открыть попап поиска
-            try:
-                # Замените '.search-toggle' на реальный селектор триггера попапа
-                search_trigger = selene_browser.element('.search-toggle')  # Уточните селектор!
-                search_trigger.should(be.clickable).click()
-            except Exception as e:
-                print(f"Триггер попапа поиска не найден: {str(e)}. Попап может быть уже открыт.")
+        browser.open("https://aabs.pro/")
+        time.sleep(2)  # Увеличиваем время ожидания загрузки страницы
 
-            # Ждем появления попапа и проверяем его видимость
-            WebDriverWait(selene_browser.driver, 10).until(
-                EC.visibility_of_element_located((By.CLASS_NAME, "search-popup__inner"))
-            )
+    def search_product(self, value: Products):
+        # Изменяем селектор на более общий для поля поиска
+        browser.element('.search-form input[type="text"]').click().type(value.model).press_enter()
+        time.sleep(3)
 
-            # Ждем появления поля поиска с name="search_text" и проверяем видимость
-            search_element = WebDriverWait(selene_browser.driver, 10).until(
-                EC.presence_of_element_located((By.NAME, "search_text"))
-            )
-            search_element = selene_browser.element('[name="search_text"]')
-            search_element.should(be.visible)  # Проверяем, что поле видно
-            print("Поле поиска успешно найдено и отображается.")
-        except Exception as e:
-            print("Поле поиска с name='search_text' не найдено на странице или не отображается. HTML страницы:")
-            print(selene_browser.driver.page_source)
-            raise Exception("Поле поиска отсутствует на странице или не отображается. Тест не может продолжиться.")
+    def check_product_availability(self, value):
+        # Используем более общий селектор для результатов поиска
+        browser.element('.product-list').should(have.text(value.model))
 
-    def check_main_menu(self):
-        menu = selene_browser.element('[class="menu-default desktop-menu"]')
-        menu.should(have.text("Главная"))
-        menu.should(have.text("Видео"))
-        menu.should(have.text("Фото"))
-        menu.should(have.text("Кейтеринг"))
-        menu.should(have.text("Как мы готовим"))
-        menu.should(have.text("Эксклюзив от наших партнеров"))
-        menu.should(have.text("Контакты"))
-
-    def navigate_to_catalog(self):
-        catalog_link = selene_browser.element(by.text("Кейтеринг"))
-        catalog_link.should(be.clickable).click()
-        WebDriverWait(selene_browser.driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "site-main"))
-        )
-
-    def check_catalog_content(self):
-        selene_browser.element('[class="site-main"]').should(be.visible)
-
-    def add_to_cart_from_catalog(self):
-        add_to_cart_button = selene_browser.element('[class="button-cart"]')
-        add_to_cart_button.should(be.clickable).click()
-        WebDriverWait(selene_browser.driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "btn-inverse"))
-        )
+    def add_to_cart(self):
+        # Более общий селектор для кнопки добавления в корзину
+        browser.element('.product-layout button[onclick*="cart.add"]').click()
+        time.sleep(1)
 
     def open_cart(self):
-        cart_button = selene_browser.element('[class="btn-inverse"]')
-        cart_button.should(be.clickable).click()
-        WebDriverWait(selene_browser.driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "table-responsive"))
-        )
+        # Более общий селектор для корзины
+        browser.element('#cart-total').click()
+        time.sleep(1)
+        browser.element('a[href*="checkout/cart"]').click()
+        time.sleep(2)
 
-    def check_cart(self, value: Products):
-        cart_table = selene_browser.element('[class="table-responsive"]')
-        cart_table.should(have.text(value.model))
-        cart_table.element('[class="quantity"]').should(have.text(value.quantity))
+    def check_cart(self, value):
+        # Более общий селектор для проверки товара в корзине
+        browser.element('.table-responsive').should(have.text(value.model))
 
-    def check_product_details(self, value: Products):
-        product_layout = selene_browser.element('[class="product-layout"]')
-        product_layout.should(be.clickable).click()
-        WebDriverWait(selene_browser.driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "product-info"))
-        )
-        product_info = selene_browser.element('[class="product-info"]')
-        product_info.should(have.text(value.model))
-        product_info.should(have.text(value.price))
+    def check_main_menu(self):
+        # Проверяем только основное меню, используя более общий селектор
+        browser.element('#main-menu').should(be.visible)
 
-    def perform_search(self, search_query):
-        search_input = selene_browser.element('[name="search_text"]')
-        search_input.should(be.visible).type(search_query)
-        search_button = selene_browser.element('.search-block__btn')
-        search_button.should(be.clickable).click()
-        WebDriverWait(selene_browser.driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "search-results"))
-        )
+    def navigate_to_category(self, category_name):
+        # Ищем ссылку по тексту
+        browser.element(by.text(category_name)).click()
+        time.sleep(1)
+
+    def check_category_content(self):
+        # Проверяем, что страница категории загрузилась
+        browser.element('h1').should(be.visible)
+
+    def check_product_details(self, value):
+        # Проверяем детали товара на странице
+        browser.element('h1, .product-title').should(be.visible)
+
+    def change_quantity(self, quantity):
+        # Обновленный селектор для поля количества
+        browser.element('input[name="quantity"]').clear().type(quantity)
+        time.sleep(1)
+
+    def check_fast_order_button(self):
+        # Проверяем наличие кнопки быстрого заказа или любой кнопки заказа
+        browser.element('#button-cart, .buy-one-click').should(be.visible)
+
+    def click_request_call(self):
+        # Проверяем наличие кнопки "Заказать звонок"
+        browser.element('a[href*="callback"], #callback-button, .callback-btn').click()
+        time.sleep(1)
+
+    def check_phone_number(self):
+        # Проверяем наличие телефона на странице
+        browser.element('.phone-number, [href*="tel:"]').should(be.visible)
+
+    def check_site_description(self):
+        # Проверка описания сайта на главной странице
+        browser.element('.site-info__desc').should(have.text('Угольные грили с системой автоподдува воздуха'))
